@@ -13,6 +13,14 @@ Lightweight Telegram alerting library for JVM applications.
 - `alertbridge-spring-boot-starter`: auto-configured beans for Spring Boot.
 - `alertbridge-ktor`: Ktor plugin + helper accessor.
 
+## Compatibility Matrix
+
+| Area | Supported versions | CI coverage |
+|---|---|---|
+| Java | 17, 21 | 17 + 21 |
+| Spring Boot starter | 3.2+ | 3.2.12, 3.3.13, 3.4.7, 3.5.4 |
+| Ktor integration | 2.3.x baseline | Built on every CI run |
+
 ## Coordinates
 
 Group: `com.codersergg`
@@ -23,11 +31,25 @@ Artifacts:
 - `com.codersergg:alertbridge-spring-boot-starter:<version>`
 - `com.codersergg:alertbridge-ktor:<version>`
 
-Published via GitHub Packages:
+## Repository Access
+
+### Public without credentials
+
+Use Maven Central. Consumers need only:
+
+```kotlin
+repositories {
+    mavenCentral()
+}
+```
+
+### Current publish target in this repository
+
+GitHub Packages is configured right now:
 
 - https://github.com/codersergg/alertbridge/packages
 
-For consuming from GitHub Packages, add repository:
+GitHub Packages requires credentials even for public packages. Use it only as an additional/private channel:
 
 ```kotlin
 repositories {
@@ -214,7 +236,9 @@ alerts.error(
 
 Included workflows:
 
-- `CI` (`.github/workflows/ci.yml`): build + tests on push/PR.
+- `CI` (`.github/workflows/ci.yml`): build + tests on push/PR with matrix:
+  - Java: 17, 21
+  - Spring Boot (starter compile/test baseline): 3.2.12, 3.3.13, 3.4.7, 3.5.4
 - `Publish` (`.github/workflows/publish.yml`): publish artifacts to GitHub Packages on `v*` tags and manual run.
 
 ### Release flow
