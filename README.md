@@ -1,0 +1,229 @@
+# AlertBridge
+
+Lightweight Telegram alerting library for JVM applications.
+
+- Works in any JVM code (`alertbridge-core`)
+- Spring Boot starter (`alertbridge-spring-boot-starter`)
+- Ktor integration (`alertbridge-ktor`)
+- No runtime dependency on LingFlow code
+
+## Modules
+
+- `alertbridge-core`: generic JVM API + default Telegram HTTP client.
+- `alertbridge-spring-boot-starter`: auto-configured beans for Spring Boot.
+- `alertbridge-ktor`: Ktor plugin + helper accessor.
+
+## Coordinates
+
+Group: `com.codersergg`
+
+Artifacts:
+
+- `com.codersergg:alertbridge-core:<version>`
+- `com.codersergg:alertbridge-spring-boot-starter:<version>`
+- `com.codersergg:alertbridge-ktor:<version>`
+
+Published via GitHub Packages:
+
+- https://github.com/codersergg/alertbridge/packages
+
+For consuming from GitHub Packages, add repository:
+
+```kotlin
+repositories {
+    mavenCentral()
+    maven {
+        url = uri("https://maven.pkg.github.com/codersergg/alertbridge")
+        credentials {
+            username = findProperty("gpr.user") as String? ?: System.getenv("GITHUB_ACTOR")
+            password = findProperty("gpr.key") as String? ?: System.getenv("GITHUB_TOKEN")
+        }
+    }
+}
+```
+
+---
+
+## 1) Plain JVM Usage
+
+### Gradle
+
+```kotlin
+dependencies {
+    implementation("com.codersergg:alertbridge-core:<version>")
+}
+```
+
+### Example
+
+```kotlin
+import com.codersergg.alertbridge.core.*
+import java.time.Duration
+
+val config = TelegramAlertConfig(
+    enabled = true,
+    botToken = System.getenv("ALERT_TELEGRAM_BOT_TOKEN"),
+    chatId = System.getenv("ALERT_TELEGRAM_CHAT_ID"),
+    messageThreadId = System.getenv("ALERT_TELEGRAM_THREAD_ID")?.toLongOrNull(),
+    connectTimeout = Duration.ofSeconds(2),
+    requestTimeout = Duration.ofSeconds(3),
+    dedupWindow = Duration.ofMinutes(2),
+)
+
+val client = DefaultTelegramAlertClient(config)
+val alerts = TelegramAlertService(client, dedupWindowSeconds = 120)
+
+alerts.critical(
+    title = "Database degraded",
+    details = "p99 latency is above threshold for 5m",
+    fingerprint = "db-p99-degraded",
+    service = "billing-service",
+)
+```
+
+### API Summary
+
+- `TelegramAlertService.info(...)`
+- `TelegramAlertService.warning(...)`
+- `TelegramAlertService.error(...)`
+- `TelegramAlertService.critical(...)`
+- `TelegramAlertService.send(...)`
+
+Each method returns `TelegramAlertResult(sent: Boolean, reason: String?)`.
+
+`fingerprint` is used for built-in de-dup suppression within the dedup window.
+
+---
+
+## 2) Spring Boot Starter
+
+### Gradle
+
+```kotlin
+dependencies {
+    implementation("com.codersergg:alertbridge-spring-boot-starter:<version>")
+}
+```
+
+### Configuration
+
+```yaml
+alertbridge:
+  telegram:
+    enabled: true
+    bot-token: ${ALERT_TELEGRAM_BOT_TOKEN}
+    chat-id: ${ALERT_TELEGRAM_CHAT_ID}
+    message-thread-id: ${ALERT_TELEGRAM_THREAD_ID:}
+    connect-timeout-ms: 2000
+    request-timeout-ms: 3000
+    dedup-window-seconds: 120
+    service-name: my-service
+```
+
+### Inject and Use
+
+```kotlin
+import com.codersergg.alertbridge.core.TelegramAlertService
+import org.springframework.stereotype.Service
+
+@Service
+class IncidentReporter(
+    private val alerts: TelegramAlertService,
+) {
+    fun onCriticalFailure(error: Throwable) {
+        alerts.critical(
+            title = "Critical failure",
+            details = error.message ?: "unknown",
+            fingerprint = "critical-failure",
+            service = "my-service",
+        )
+    }
+}
+```
+
+### Auto-configured Beans
+
+- `TelegramAlertConfig`
+- `TelegramAlertClient`
+- `TelegramAlertService`
+
+Beans are created only when `alertbridge.telegram.enabled=true`.
+
+---
+
+## 3) Ktor Integration
+
+### Gradle
+
+```kotlin
+dependencies {
+    implementation("com.codersergg:alertbridge-ktor:<version>")
+}
+```
+
+### Install Plugin
+
+```kotlin
+import com.codersergg.alertbridge.core.TelegramAlertConfig
+import com.codersergg.alertbridge.ktor.AlertBridgeKtorPlugin
+import io.ktor.server.application.install
+
+fun Application.module() {
+    install(AlertBridgeKtorPlugin) {
+        config = TelegramAlertConfig(
+            enabled = true,
+            botToken = System.getenv("ALERT_TELEGRAM_BOT_TOKEN"),
+            chatId = System.getenv("ALERT_TELEGRAM_CHAT_ID"),
+        )
+        dedupWindowSeconds = 120
+    }
+}
+```
+
+### Access in Ktor Code
+
+```kotlin
+import com.codersergg.alertbridge.ktor.alertBridge
+
+val alerts = application.alertBridge()
+alerts.error(
+    title = "External API failure",
+    details = "provider timeout",
+    fingerprint = "provider-timeout",
+    service = "ktor-gateway",
+)
+```
+
+---
+
+## Operational Notes
+
+- Keep Telegram bot token in secret storage only.
+- Keep chat/thread identifiers in config.
+- Use stable fingerprints for dedup (e.g. `component-error-code`).
+- Send concise details; avoid secrets/PII in alert text.
+
+## Roadmap
+
+- Async/non-blocking sender mode
+- Retry and backoff strategies
+- Structured templating
+- Micrometer integration module
+
+## GitHub Actions
+
+Included workflows:
+
+- `CI` (`.github/workflows/ci.yml`): build + tests on push/PR.
+- `Publish` (`.github/workflows/publish.yml`): publish artifacts to GitHub Packages on `v*` tags and manual run.
+
+### Release flow
+
+1. Update version in `gradle.properties`.
+2. Commit and push to `main`.
+3. Create tag, e.g. `v0.1.0`, and push tag.
+4. GitHub Actions `Publish` workflow uploads artifacts.
+
+## License
+
+MIT
