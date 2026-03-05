@@ -1,7 +1,10 @@
 package com.codersergg.alertbridge.spring
 
 import com.codersergg.alertbridge.core.DefaultTelegramAlertClient
+import com.codersergg.alertbridge.core.NoopTelegramAlertNotifier
 import com.codersergg.alertbridge.core.ScopedTelegramAlertService
+import com.codersergg.alertbridge.core.ScopedTelegramAlertNotifier
+import com.codersergg.alertbridge.core.TelegramAlertNotifier
 import com.codersergg.alertbridge.core.TelegramAlertClient
 import com.codersergg.alertbridge.core.TelegramAlertConfig
 import com.codersergg.alertbridge.core.TelegramAlertService
@@ -15,11 +18,13 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.boot.info.BuildProperties
 import org.springframework.context.annotation.Bean
 import java.time.Duration
+import org.slf4j.LoggerFactory
 
 @AutoConfiguration
 @ConditionalOnClass(TelegramAlertService::class)
 @EnableConfigurationProperties(AlertBridgeProperties::class)
 class AlertBridgeAutoConfiguration {
+    private val log = LoggerFactory.getLogger(javaClass)
 
     @Bean
     @ConditionalOnMissingBean
@@ -72,5 +77,16 @@ class AlertBridgeAutoConfiguration {
             .ifBlank { appVersionFromEnv.trim() }
             .ifBlank { "unknown" }
         return alerts.scoped(serviceName = serviceName, version = serviceVersion)
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    fun telegramAlertNotifier(
+        scopedAlertsProvider: ObjectProvider<ScopedTelegramAlertService>,
+    ): TelegramAlertNotifier {
+        val scoped = scopedAlertsProvider.ifAvailable ?: return NoopTelegramAlertNotifier
+        return ScopedTelegramAlertNotifier(scoped) { result ->
+            log.warn("Telegram alert send failed: {}", result.reason ?: "unknown")
+        }
     }
 }
