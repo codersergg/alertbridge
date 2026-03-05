@@ -120,6 +120,7 @@ serviceAlerts.critical(
 - `ScopedTelegramAlertService.info/warning/error/critical(details, fingerprint)`
 - `ScopedTelegramAlertService.info/warning/error/critical(event, fingerprint, fields)`
 - `ScopedTelegramAlertService.infoRaw/warningRaw/errorRaw/criticalRaw(details, fingerprint)`
+- `TelegramAlertNotifier.notifyInfo/notifyWarning/notifyCritical(details, fingerprint)`
 
 Each method returns `TelegramAlertResult(sent: Boolean, reason: String?)`.
 
@@ -156,21 +157,20 @@ alertbridge:
     overflow-policy: DropOldest
 ```
 
-### Inject and Use
+### Inject and Use (Config-Only in App Code)
 
 ```kotlin
-import com.codersergg.alertbridge.core.TelegramAlertService
+import com.codersergg.alertbridge.core.TelegramAlertNotifier
 import org.springframework.stereotype.Service
 
 @Service
 class IncidentReporter(
-    private val alerts: ScopedTelegramAlertService,
+    private val alerts: TelegramAlertNotifier,
 ) {
     fun onCriticalFailure(error: Throwable) {
-        alerts.critical(
-            event = "critical_failure",
+        alerts.notifyCritical(
+            details = "event=critical_failure reason=${error.message ?: "unknown"}",
             fingerprint = "critical-failure",
-            fields = mapOf("reason" to (error.message ?: "unknown")),
         )
     }
 }
@@ -182,8 +182,10 @@ class IncidentReporter(
 - `TelegramAlertClient`
 - `TelegramAlertService`
 - `ScopedTelegramAlertService`
+- `TelegramAlertNotifier` (real when enabled, `NoopTelegramAlertNotifier` when disabled)
 
-Beans are created only when `alertbridge.telegram.enabled=true`.
+`TelegramAlertNotifier` bean is always available for injection.
+Underlying Telegram sender beans are created only when `alertbridge.telegram.enabled=true`.
 
 ---
 
