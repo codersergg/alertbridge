@@ -18,7 +18,7 @@ class DefaultTelegramAlertClient(
     override fun send(message: TelegramAlertMessage): TelegramAlertResult {
         if (!config.enabled) return TelegramAlertResult(sent = false, reason = "disabled")
 
-        val text = buildText(message)
+        val text = TelegramAlertTextFormatter.format(message)
         val body = buildFormBody(text)
         val endpoint = "https://api.telegram.org/bot${config.botToken}/sendMessage"
 
@@ -39,17 +39,6 @@ class DefaultTelegramAlertClient(
         }.getOrElse { ex ->
             TelegramAlertResult(sent = false, reason = ex.message ?: "request_failed")
         }
-    }
-
-    private fun buildText(message: TelegramAlertMessage): String {
-        val tags = if (message.tags.isEmpty()) "" else message.tags.entries.joinToString(" ") { (k, v) -> "$k=$v" }
-        val servicePart = message.service?.let { "service=$it\n" }.orEmpty()
-        return "[${message.level.name.uppercase()}] ${message.title}\n" +
-            servicePart +
-            "${message.details}\n" +
-            "fingerprint=${message.fingerprint}\n" +
-            "at=${message.at}" +
-            if (tags.isBlank()) "" else "\n$tags"
     }
 
     private fun buildFormBody(text: String): String {

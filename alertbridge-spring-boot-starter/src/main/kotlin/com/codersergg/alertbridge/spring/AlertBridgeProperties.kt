@@ -1,5 +1,6 @@
 package com.codersergg.alertbridge.spring
 
+import com.codersergg.alertbridge.core.AlertQueueOverflowPolicy
 import org.springframework.boot.context.properties.ConfigurationProperties
 
 @ConfigurationProperties(prefix = "alertbridge.telegram")
@@ -12,4 +13,8 @@ data class AlertBridgeProperties(
     var requestTimeoutMs: Long = 3000,
     var dedupWindowSeconds: Long = 120,
     var serviceName: String? = null,
+    var serviceVersion: String? = null,
+    var async: Boolean = true,
+    var queueCapacity: Int = 1024,
+    var overflowPolicy: AlertQueueOverflowPolicy = AlertQueueOverflowPolicy.DropOldest,
 )

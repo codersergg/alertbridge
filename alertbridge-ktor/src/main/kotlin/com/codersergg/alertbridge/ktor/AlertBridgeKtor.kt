@@ -1,6 +1,7 @@
 package com.codersergg.alertbridge.ktor
 
 import com.codersergg.alertbridge.core.DefaultTelegramAlertClient
+import com.codersergg.alertbridge.core.AlertQueueOverflowPolicy
 import com.codersergg.alertbridge.core.TelegramAlertClient
 import com.codersergg.alertbridge.core.TelegramAlertConfig
 import com.codersergg.alertbridge.core.TelegramAlertService
@@ -13,6 +14,9 @@ class AlertBridgeKtorConfig {
     var client: TelegramAlertClient? = null
     var config: TelegramAlertConfig? = null
     var dedupWindowSeconds: Long = 120
+    var async: Boolean = true
+    var queueCapacity: Int = 1024
+    var overflowPolicy: AlertQueueOverflowPolicy = AlertQueueOverflowPolicy.DropOldest
 }
 
 val AlertBridgeKtorPlugin = createApplicationPlugin(
@@ -25,6 +29,9 @@ val AlertBridgeKtorPlugin = createApplicationPlugin(
                 pluginConfig.config ?: error("AlertBridgeKtor: provide service, client, or config")
             ),
             dedupWindowSeconds = pluginConfig.dedupWindowSeconds,
+            async = pluginConfig.async,
+            queueCapacity = pluginConfig.queueCapacity,
+            overflowPolicy = pluginConfig.overflowPolicy,
         )
 
     application.attributes.put(AlertBridgeServiceKey, service)

@@ -9,6 +9,25 @@ enum class AlertLevel {
     Critical,
 }
 
+enum class AlertQueueOverflowPolicy {
+    DropOldest,
+    DropNew,
+}
+
+fun AlertLevel.label(): String = when (this) {
+    AlertLevel.Info -> "INFO"
+    AlertLevel.Warning -> "WARN"
+    AlertLevel.Error -> "ERROR"
+    AlertLevel.Critical -> "CRITICAL"
+}
+
+fun AlertLevel.emoji(): String = when (this) {
+    AlertLevel.Info -> "ℹ️"
+    AlertLevel.Warning -> "⚠️"
+    AlertLevel.Error -> "❌"
+    AlertLevel.Critical -> "🚨"
+}
+
 data class TelegramAlertMessage(
     val level: AlertLevel,
     val title: String,

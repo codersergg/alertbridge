@@ -93,13 +93,19 @@ val config = TelegramAlertConfig(
 )
 
 val client = DefaultTelegramAlertClient(config)
-val alerts = TelegramAlertService(client, dedupWindowSeconds = 120)
+val alerts = TelegramAlertService(
+    client = client,
+    dedupWindowSeconds = 120,
+    async = true,
+    queueCapacity = 1024,
+    overflowPolicy = AlertQueueOverflowPolicy.DropOldest,
+)
+val serviceAlerts = alerts.scoped(serviceName = "billing-service", version = "1.2.3")
 
-alerts.critical(
-    title = "Database degraded",
-    details = "p99 latency is above threshold for 5m",
+serviceAlerts.critical(
+    event = "db_degraded",
     fingerprint = "db-p99-degraded",
-    service = "billing-service",
+    fields = mapOf("reason" to "p99_latency_high"),
 )
 ```
 
@@ -110,6 +116,10 @@ alerts.critical(
 - `TelegramAlertService.error(...)`
 - `TelegramAlertService.critical(...)`
 - `TelegramAlertService.send(...)`
+- `TelegramAlertService.scoped(serviceName, version)` -> one-line service-scoped API:
+- `ScopedTelegramAlertService.info/warning/error/critical(details, fingerprint)`
+- `ScopedTelegramAlertService.info/warning/error/critical(event, fingerprint, fields)`
+- `ScopedTelegramAlertService.infoRaw/warningRaw/errorRaw/criticalRaw(details, fingerprint)`
 
 Each method returns `TelegramAlertResult(sent: Boolean, reason: String?)`.
 
@@ -140,6 +150,10 @@ alertbridge:
     request-timeout-ms: 3000
     dedup-window-seconds: 120
     service-name: my-service
+    service-version: 1.2.3
+    async: true
+    queue-capacity: 1024
+    overflow-policy: DropOldest
 ```
 
 ### Inject and Use
@@ -150,14 +164,13 @@ import org.springframework.stereotype.Service
 
 @Service
 class IncidentReporter(
-    private val alerts: TelegramAlertService,
+    private val alerts: ScopedTelegramAlertService,
 ) {
     fun onCriticalFailure(error: Throwable) {
         alerts.critical(
-            title = "Critical failure",
-            details = error.message ?: "unknown",
+            event = "critical_failure",
             fingerprint = "critical-failure",
-            service = "my-service",
+            fields = mapOf("reason" to (error.message ?: "unknown")),
         )
     }
 }
@@ -168,6 +181,7 @@ class IncidentReporter(
 - `TelegramAlertConfig`
 - `TelegramAlertClient`
 - `TelegramAlertService`
+- `ScopedTelegramAlertService`
 
 Beans are created only when `alertbridge.telegram.enabled=true`.
 
