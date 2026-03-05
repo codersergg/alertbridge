@@ -236,6 +236,9 @@ Also available:
 - `application.alertBridge()` -> low-level `TelegramAlertService`
 - `application.alertNotifier()` -> app-level `TelegramAlertNotifier`
 
+Recommendation for startup alerts:
+- Send startup alert before blocking server start calls (for example before `embeddedServer(...).start(wait = true)`), otherwise startup notification code may never execute.
+
 ---
 
 ## Operational Notes
