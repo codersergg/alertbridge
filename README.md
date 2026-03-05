@@ -213,6 +213,8 @@ fun Application.module() {
             botToken = System.getenv("ALERT_TELEGRAM_BOT_TOKEN"),
             chatId = System.getenv("ALERT_TELEGRAM_CHAT_ID"),
         )
+        serviceName = "ktor-gateway"
+        serviceVersion = "1.2.3"
         dedupWindowSeconds = 120
     }
 }
@@ -221,16 +223,18 @@ fun Application.module() {
 ### Access in Ktor Code
 
 ```kotlin
-import com.codersergg.alertbridge.ktor.alertBridge
+import com.codersergg.alertbridge.ktor.alertNotifier
 
-val alerts = application.alertBridge()
-alerts.error(
-    title = "External API failure",
-    details = "provider timeout",
+val alerts = application.alertNotifier()
+alerts.notifyCritical(
+    details = "event=external_api_failure reason=provider_timeout",
     fingerprint = "provider-timeout",
-    service = "ktor-gateway",
 )
 ```
+
+Also available:
+- `application.alertBridge()` -> low-level `TelegramAlertService`
+- `application.alertNotifier()` -> app-level `TelegramAlertNotifier`
 
 ---
 
