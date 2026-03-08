@@ -33,6 +33,7 @@
 - Stable image build/publish must complete first (`jib` to target registry).
 - After successful stable publish, create a mandatory marker commit with subject `release(jib): ...`.
 - Create stable git tag only on that marker commit, then push commit and tag.
+- Creating or pushing stable tag before marker commit is forbidden.
 
 ## RC Rules
 
@@ -43,6 +44,8 @@
 - Every RC `jib` release must be explicitly marked by commit subject in the working branch (`feature/*` or `release/*`):
   - `release(jib): <short note>`
   - Example: `release(jib): built and pushed <service>:v1.2.3-rc.4`
+- RC git tag must reference the marker release commit; immediate next commit is allowed only if it explicitly references marker commit hash in commit message.
+- Creating or pushing RC tag before marker release commit is forbidden.
 
 ## Required Release Order
 
