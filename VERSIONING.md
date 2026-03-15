@@ -1,4 +1,4 @@
-# Versioning Policy
+﻿# Versioning Policy
 
 ## Format
 
@@ -9,9 +9,16 @@
 
 ## Branching Policy Reference
 
-- Branch naming and merge rules are defined in:
-  - `D:\Projects\LingFlow\lingflow-docs\BRANCHING_POLICY.md`
+- Unified branch workflow rules are defined in:
+  - `D:\Projects\LingFlow\lingflow-docs\system\DOC_GOVERNANCE.md`
 
+## Mandatory Branch Workflow Rules
+
+- Feature work is allowed only in a dedicated working branch; direct feature development in `main/master` is forbidden.
+- Creating or deleting any working/feature/fix branch is allowed only after explicit agreement.
+- If there is uncertainty about the target RC line/working branch, stop implementation and clarify first.
+- Fixes must use separate `fix/*` branches from `main/master`.
+- Before merge into `main/master`, add a marker commit `finalize(feature): ...`; after merge the branch is considered closed for new feature work.
 ## Change Classification
 
 - `MAJOR`: breaking API/contract change.
@@ -52,33 +59,17 @@
 1. Update project version.
 2. Commit version bump.
 3. Run validation (tests + build/publish command used by project).
-4. Run `jib` publish.
-5. Verify pushed image exists in ECR for the exact target tag.
-6. Only after ECR verification, update `lingflow-deploy` release file (`infra/releases/release-*.env`) with the new tag.
-7. Commit RC release marker in working branch: `release(jib): ...` (allowed empty commit).
+4. Run image publish for the target registry (for example `jib` or project-specific publish command).
+5. Verify pushed image exists in registry for the exact target tag.
+6. Create a new release file in `lingflow-deploy/infra/releases/` from the latest `release-*.env`, then update only image tags/variables for services deployed in this release window (including environment-specific tags like `*_TEST_IMAGE`).
+7. Commit RC release marker in the working branch: `release(jib): ...` (empty commit allowed).
 8. Create RC git tag for that exact marker commit.
-9. Push working branch and RC tag.
-
-## Start-Of-Work Rules
-
-- Before writing code, check whether the latest commit is a published RC (`release(jib): ...` or `HEAD` has tag `vX.Y.Z-rc.N`).
-- If latest commit is a published RC, bump to next RC (`rc.N+1`) before code changes.
-- If latest commit is not a published RC, do not bump version; continue work under current RC.
-- If helper scripts exist, use:
-  - `powershell -ExecutionPolicy Bypass -File scripts/release/start-iteration.ps1`
-
-## New Branch Version Start
-
-- On new branch, open a new semantic release line:
-  - `minor` by default for planned feature work,
-  - `major` only for planned breaking changes.
-- Initial version on the new branch must start from `MAJOR.MINOR.PATCH-rc.1`.
-- Do not continue previous line RCs on a newly created branch.
-- If helper scripts exist, use:
-  - `powershell -ExecutionPolicy Bypass -File scripts/release/start-branch.ps1 -ChangeType minor`
-  - `powershell -ExecutionPolicy Bypass -File scripts/release/start-branch.ps1 -ChangeType major`
-
+9. Push branch and tag.
 ## Multi-Service Compatibility
 
 - For cross-service contract changes, release provider/backend RC first, then consumer/client RC.
 - Do not release dependent service RC before dependency contract RC exists.
+
+
+
+
