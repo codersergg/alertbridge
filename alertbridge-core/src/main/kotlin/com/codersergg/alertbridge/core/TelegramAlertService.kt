@@ -15,6 +15,7 @@ class TelegramAlertService(
     private val async: Boolean = true,
     queueCapacity: Int = 1024,
     overflowPolicy: AlertQueueOverflowPolicy = AlertQueueOverflowPolicy.DropOldest,
+    private val agentMirror: DurableAgentAlertMirror? = DurableAgentAlertMirror.fromEnvironment(),
 ) {
     private val lastSentEpochByFingerprint = ConcurrentHashMap<String, Long>()
     private val workerScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -52,10 +53,6 @@ class TelegramAlertService(
         ScopedTelegramAlertService(this, serviceName, version)
 
     fun send(level: AlertLevel, title: String, details: String, fingerprint: String, service: String? = null): TelegramAlertResult {
-        if (!shouldSend(fingerprint)) {
-            return TelegramAlertResult(sent = false, reason = "dedup_suppressed")
-        }
-
         val message = TelegramAlertMessage(
             level = level,
             title = title,
@@ -64,11 +61,19 @@ class TelegramAlertService(
             at = Instant.now(),
             service = service,
         )
+        // Persist admission before Telegram deduplication or its lossy async queue.
+        val admitted = runCatching { agentMirror?.enqueue(message) ?: true }.getOrDefault(false)
+        if (!shouldSend(fingerprint)) {
+            return TelegramAlertResult(sent = false, reason = if (admitted) "dedup_suppressed" else "agent_queue_failed")
+        }
         if (!async) {
-            return client.send(message)
+            val telegram = client.send(message)
+            return if (admitted) telegram else TelegramAlertResult(sent = false, reason = "agent_queue_failed")
         }
         val queued = sendQueue?.trySend(message)?.isSuccess == true
-        return if (queued) {
+        return if (!admitted) {
+            TelegramAlertResult(sent = false, reason = "agent_queue_failed")
+        } else if (queued) {
             TelegramAlertResult(sent = true, reason = "queued")
         } else {
             TelegramAlertResult(sent = false, reason = "queue_full_dropped_new")
