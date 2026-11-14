@@ -39,7 +39,7 @@ class DurableAgentAlertMirror(
 
     init {
         require(endpoint.scheme == "https" && endpoint.host != null && endpoint.rawUserInfo == null &&
-            endpoint.path == "/alerts" && endpoint.rawQuery == null && endpoint.rawFragment == null)
+            endpoint.path in setOf("/alerts", "/_agent/alerts") && endpoint.rawQuery == null && endpoint.rawFragment == null)
         require(source.matches(Regex("[a-z0-9-]{1,64}")) && version.isNotBlank() && version.length <= 128)
         require(spool.isAbsolute && keyFile.isAbsolute && maxPending in 1..1000)
         val privatePermissions = java.nio.file.attribute.PosixFilePermissions.fromString("rwx------")
@@ -150,7 +150,7 @@ class DurableAgentAlertMirror(
             val endpoint = env["ALERTBRIDGE_AGENT_URL"] ?: return null
             return DurableAgentAlertMirror(
                 URI.create(endpoint), requireNotNull(env["ALERTBRIDGE_AGENT_SOURCE"]),
-                requireNotNull(env["APP_VERSION"]), Path.of(requireNotNull(env["ALERTBRIDGE_AGENT_KEY_FILE"])),
+                requireNotNull(env["APP_VERSION"] ?: env["APP_ALERTS_TELEGRAM_SERVICE_VERSION"]), Path.of(requireNotNull(env["ALERTBRIDGE_AGENT_KEY_FILE"])),
                 Path.of(requireNotNull(env["ALERTBRIDGE_AGENT_SPOOL"])),
             ).also { it.start() }
         }

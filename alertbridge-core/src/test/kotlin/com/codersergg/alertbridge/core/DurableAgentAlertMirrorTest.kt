@@ -10,6 +10,22 @@ import kotlin.test.assertTrue
 
 class DurableAgentAlertMirrorTest {
     @Test
+    fun `shared HTTPS ingress path admits durable event`() {
+        val directory = Files.createTempDirectory("alert-shared-path")
+        try {
+            DurableAgentAlertMirror(URI("https://alerts.example/_agent/alerts"), "backend-prod", "1.9.1",
+                directory.resolve("key"), directory, deliver = { false }).use { mirror ->
+                assertTrue(mirror.enqueue(TelegramAlertMessage(AlertLevel.Error, "failure", "", "fp")))
+                mirror.flush()
+                assertEquals(1L, Files.list(directory).use { it.count() })
+            }
+        } finally {
+            Files.list(directory).use { it.forEach(Files::deleteIfExists) }
+            Files.delete(directory)
+        }
+    }
+
+    @Test
     fun `telegram dedup does not suppress durable agent admission`() {
         val directory = Files.createTempDirectory("alert-dedup")
         try {
